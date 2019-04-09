@@ -1,4 +1,4 @@
 a)
 
 - Server verarbeitet die Anfragen sequentiell
--
+- Lange Rückmeldung bei Prime-Zahlen, grund: berechnung ob Primezahl dauert lange weil ganze schleife durchlaufen wird. Bei einer not prime zahl wird früher bagebrochen. Lösung: bessere Berechnung für Primezahlen
