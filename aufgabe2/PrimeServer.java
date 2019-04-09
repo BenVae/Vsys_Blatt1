@@ -1,12 +1,9 @@
 package aufgabe2;
 
-import rm.requestResponse.Component;
-import rm.requestResponse.Message;
-
 import java.io.IOException;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
+
+import rm.requestResponse.*;
 
 public class PrimeServer {
 	private final static int PORT=1234;
@@ -62,8 +59,7 @@ public class PrimeServer {
 
     public static void main(String[] args) {
     	int port=0;
-
-    	//iteriert über args -> können später mehrere Ports übergeben werden
+    	
     	for (int i = 0; i<args.length; i++)  {
 			switch(args[i]) {
 				case "-port": 
