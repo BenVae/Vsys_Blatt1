@@ -1,7 +1,12 @@
-import java.io.IOException;
-import java.util.logging.*;
+package aufgabe2;
 
-import rm.requestResponse.*;
+import rm.requestResponse.Component;
+import rm.requestResponse.Message;
+
+import java.io.IOException;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class PrimeServer {
 	private final static int PORT=1234;
