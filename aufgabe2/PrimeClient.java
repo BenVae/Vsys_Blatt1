@@ -1,26 +1,20 @@
 package aufgabe2;
 
+import rm.requestResponse.Component;
+import rm.requestResponse.Message;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
-import org.omg.PortableServer.THREAD_POLICY_ID;
-import rm.requestResponse.*;
-
 public class PrimeClient extends Thread {
     private static final String HOSTNAME = "localhost";
     private static final int PORT = 1234;
-    private static final String REQUEST_MODE = "SYNCHRONIZED";
+    private static final String REQUEST_MODE = "b";
     private static final long INITIAL_VALUE = (long) 1e17;
     private static final long COUNT = 20;
     private static final String CLIENT_NAME = PrimeClient.class.getName();
-
-    private static boolean isRequesting = false;
-    private static boolean isUpdated = false;
-
-    private static boolean processedIsPrime = false;
-
 
     private Component communication;
     String hostname, requestMode;
@@ -40,15 +34,11 @@ public class PrimeClient extends Thread {
             communication = new Component();
             for (long i = initialValue; i < initialValue + count; i++) {
                 switch (requestMode) {
-                    case "POLLING":
+                    case "p":
                         polling(i);
                         break;
-                    case "CONCURRENT":
-                        if (!isRequesting()) {
-                            concurrent(i);
-                        } else {
-                            ausgabeThread(i);
-                        }
+                    case "c":
+                        concurrent(i);
                         break;
                     default:
                         synchronised(i);
@@ -60,65 +50,42 @@ public class PrimeClient extends Thread {
         }
     }
 
-    private static synchronized boolean isRequesting() {
-        boolean returnValue = isRequesting;
-        isRequesting = true;
-        return returnValue;
-    }
-
-    private void ausgabeThread(long value) {
-
-        System.out.println(Thread.currentThread().getName() + " is writing");
-
-        System.out.print(value + ": ");
-
-        while (true) {
-            System.out.print(".");
-            if (isUpdated) {
-                System.out.println((processedIsPrime ? " prime" : " not prime"));
-                isUpdated = false;
-                return;
-            }
-            try {
-                TimeUnit.MILLISECONDS.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void concurrent(long value) throws IOException, ClassNotFoundException {
-
-        System.out.println(Thread.currentThread().getName() + " is requesting");
-        communication.send(new Message(hostname, port, new Long(value)), false);
-        processedIsPrime = (Boolean) communication.receive(port, true, true).getContent();
-
-        System.out.println(Thread.currentThread().getName() + " got an answer: " + processedIsPrime);
-
-        isUpdated = true;
-
-        isRequesting = false;
-    }
-
     private void synchronised(long value) throws IOException, ClassNotFoundException {
         System.out.print(value + ": ");
 
-        communication.send(new Message(hostname, port, new Long(value)), false);
+        communication.send(new Message(hostname, port, value), false);
         Boolean isPrime = (Boolean) communication.receive(port, true, true).getContent();
 
-        System.out.println((isPrime.booleanValue() ? "prime" : "not prime"));
+        System.out.println((isPrime ? "prime" : "not prime"));
+    }
+
+    private void concurrent(long value) throws IOException, ClassNotFoundException {
+        System.out.print(value + ": ");
+
+        communication.send(new Message(hostname, port, value), false);
+
+        Thread thread = new AusgabeThread();
+        thread.start();
+
+        Boolean isPrime = (Boolean) communication.receive(port, true, true).getContent();
+
+        thread.stop();
+
+        System.out.println((isPrime ? " prime" : " not prime"));
     }
 
     private void polling(long value) throws IOException, ClassNotFoundException {
         System.out.print(value + ": ");
 
         while (true) {
-            communication.send(new Message(hostname, port, new Long(value)), true);
+            communication.send(new Message(hostname, port, value), true);
+
+            System.out.print(".");
 
             Message response = communication.receive(port, false, true);
             if (response != null) {
                 Boolean isPrime = (Boolean) response.getContent();
-                System.out.println((isPrime.booleanValue() ? " prime" : " not prime"));
+                System.out.println((isPrime ? " prime" : " not prime"));
                 break;
             }
 
@@ -131,7 +98,7 @@ public class PrimeClient extends Thread {
         }
     }
 
-    public static void main(String args[]) throws IOException, ClassNotFoundException {
+    public static void main(String args[]) throws IOException {
         String hostname = HOSTNAME;
         int port = PORT;
         String requestMode = REQUEST_MODE;
@@ -154,6 +121,7 @@ public class PrimeClient extends Thread {
             input = reader.readLine();
             if (!input.equals("")) port = Integer.parseInt(input);
 
+            System.out.println("Request Modes: (b)locking, (p)olling, (c)oncurrent");
             System.out.print("Request mode [" + requestMode + "] > ");
             input = reader.readLine();
             if (!input.equals("")) requestMode = input;
@@ -166,13 +134,7 @@ public class PrimeClient extends Thread {
             input = reader.readLine();
             if (!input.equals("")) count = Integer.parseInt(input);
 
-            if (requestMode.equals("CONCURRENT")) {
-                for (int i = 0; i < 2; i++) {
-                    new PrimeClient(hostname, port, requestMode, initialValue, count).start();
-                }
-            } else {
-                new PrimeClient(hostname, port, requestMode, initialValue, count).run();
-            }
+            new PrimeClient(hostname, port, requestMode, initialValue, count).run();
 
             System.out.println("Exit [n]> ");
             input = reader.readLine();
@@ -180,4 +142,5 @@ public class PrimeClient extends Thread {
         }
     }
 }
+
 	
