@@ -30,14 +30,12 @@ public class PrimeClient {
 
     public void run() throws ClassNotFoundException, IOException {
         communication = new Component();
-        for (long i = initialValue; i < initialValue + count; i++) processNumber(i);
-    }
-
-    public void processNumber(long value) throws IOException, ClassNotFoundException {
-        if (requestMode.equals("SYNCHRONIZED")){
-            synchronised(value);
-        }else {
-            polling(value);
+        for (long i = initialValue; i < initialValue + count; i++){
+            if (requestMode.equals("SYNCHRONIZED")){
+                synchronised(i);
+            }else {
+                polling(i);
+            }
         }
     }
 
@@ -50,7 +48,7 @@ public class PrimeClient {
         System.out.println((isPrime.booleanValue() ? "prime" : "not prime"));
     }
 
-    public void polling(long value) throws IOException, ClassNotFoundException {
+    private void polling(long value) throws IOException, ClassNotFoundException {
         System.out.print(value + ": ");
 
         while (true) {
@@ -61,12 +59,12 @@ public class PrimeClient {
             Message response = communication.receive(port, false, true);
             if (response != null){
                 Boolean isPrime = (Boolean) response.getContent();
-                System.out.println((isPrime.booleanValue() ? "prime" : "not prime"));
+                System.out.println((isPrime.booleanValue() ? " prime" : " not prime"));
                 break;
             }
 
             try {
-                TimeUnit.SECONDS.sleep(1);
+                TimeUnit.MILLISECONDS.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
