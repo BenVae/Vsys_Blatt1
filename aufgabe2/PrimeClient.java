@@ -7,13 +7,17 @@ import java.util.concurrent.TimeUnit;
 
 import rm.requestResponse.*;
 
-public class PrimeClient {
+public class PrimeClient extends Thread {
     private static final String HOSTNAME = "localhost";
     private static final int PORT = 1234;
     private static final String REQUEST_MODE = "SYNCHRONIZED";
     private static final long INITIAL_VALUE = (long) 1e17;
     private static final long COUNT = 20;
     private static final String CLIENT_NAME = PrimeClient.class.getName();
+
+    private static boolean isRequesting = false;
+    private static boolean processedIsPrime = false;
+
 
     private Component communication;
     String hostname, requestMode;
@@ -28,15 +32,46 @@ public class PrimeClient {
         this.count = count;
     }
 
-    public void run() throws ClassNotFoundException, IOException {
-        communication = new Component();
-        for (long i = initialValue; i < initialValue + count; i++){
-            if (requestMode.equals("SYNCHRONIZED")){
-                synchronised(i);
-            }else {
-                polling(i);
+    public void run() {
+
+        try {
+            communication = new Component();
+            for (long i = initialValue; i < initialValue + count; i++) {
+                if (requestMode.equals("SYNCHRONIZED")) {
+                    synchronised(i);
+                } else if (requestMode.equals("POLLING")){
+                    polling(i);
+                }else if (requestMode.equals("CONCURRENT")){
+                    if (!isRequesting){
+                        concurrent(i);
+                    }else{
+                        ausgabeThread(i);
+                    }
+                }
             }
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
         }
+    }
+
+    private void ausgabeThread(long value) {
+
+        System.out.print(value + ": ");
+
+        while(!isRequesting){
+            System.out.print(".");
+        }
+
+        System.out.println((processedIsPrime ? " prime" : " not prime"));
+    }
+
+    private void concurrent(long value) throws IOException, ClassNotFoundException {
+        isRequesting = true;
+
+        communication.send(new Message(hostname, port, new Long(value)), false);
+        processedIsPrime = (Boolean) communication.receive(port, true, true).getContent();
+
+        isRequesting = false;
     }
 
     private void synchronised(long value) throws IOException, ClassNotFoundException {
@@ -53,8 +88,6 @@ public class PrimeClient {
 
         while (true) {
             communication.send(new Message(hostname, port, new Long(value)), true);
-
-            System.out.print(".");
 
             Message response = communication.receive(port, false, true);
             if (response != null){
@@ -107,7 +140,13 @@ public class PrimeClient {
             input = reader.readLine();
             if (!input.equals("")) count = Integer.parseInt(input);
 
-            new PrimeClient(hostname, port, requestMode, initialValue, count).run();
+            if (requestMode.equals("CONCURRENT")){
+                for (int i = 0; i < 2; i++){
+                    new PrimeClient(hostname, port, requestMode, initialValue, count).start();
+                }
+            }else{
+                new PrimeClient(hostname, port, requestMode, initialValue, count).run();
+            }
 
             System.out.println("Exit [n]> ");
             input = reader.readLine();
