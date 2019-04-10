@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
+import org.omg.PortableServer.THREAD_POLICY_ID;
 import rm.requestResponse.*;
 
 public class PrimeClient extends Thread {
@@ -67,26 +68,32 @@ public class PrimeClient extends Thread {
 
     private void ausgabeThread(long value) {
 
+        System.out.println(Thread.currentThread().getName() + " is writing");
+
         System.out.print(value + ": ");
 
-        while (!isUpdated) {
+        while (true) {
             System.out.print(".");
+            if (isUpdated) {
+                System.out.println((processedIsPrime ? " prime" : " not prime"));
+                isUpdated = false;
+                return;
+            }
             try {
                 TimeUnit.MILLISECONDS.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-
-        System.out.println((processedIsPrime ? " prime" : " not prime"));
-
-        isUpdated = false;
     }
 
     private void concurrent(long value) throws IOException, ClassNotFoundException {
 
+        System.out.println(Thread.currentThread().getName() + " is requesting");
         communication.send(new Message(hostname, port, new Long(value)), false);
         processedIsPrime = (Boolean) communication.receive(port, true, true).getContent();
+
+        System.out.println(Thread.currentThread().getName() + " got an answer: " + processedIsPrime);
 
         isUpdated = true;
 
